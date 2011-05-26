@@ -136,7 +136,7 @@ def throttle(max_requests, timeout=60*60, extra=''):
             now = time.time()
             count, expiration = cache.get(ident, (1, None))
 
-            if expiration is None:
+            if expiration is None or expiration < now:
                 expiration = now + timeout
 
             if count >= max_requests and expiration > now:
