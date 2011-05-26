@@ -137,6 +137,7 @@ def throttle(max_requests, timeout=60*60, extra=''):
             count, expiration = cache.get(ident, (1, None))
 
             if expiration is None or expiration < now:
+                count = 1  # reset count
                 expiration = now + timeout
 
             if count >= max_requests and expiration > now:
