@@ -54,6 +54,15 @@ class ModelStore(Store):
         request_token.delete()
         return access_token
 
+    def create_access_token_for_user(self, request, oauth_request, consumer, user):
+        access_token = Token.objects.create_token(
+            token_type=Token.ACCESS,
+            timestamp=oauth_request['oauth_timestamp'],
+            consumer=Consumer.objects.get(key=consumer.key),
+            user=user,
+        )
+        return access_token
+
     def get_access_token(self, request, oauth_request, consumer, access_token_key):
         try:
             return Token.objects.get(key=access_token_key, token_type=Token.ACCESS)

@@ -2,10 +2,11 @@ from urllib import urlencode
 
 import oauth2 as oauth
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, HttpResponseForbidden
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import authenticate
 
 from piston.authentication.oauth.forms import AuthorizeRequestTokenForm
 from piston.authentication.oauth.store import store, InvalidConsumerError, InvalidTokenError
@@ -69,29 +70,56 @@ def authorize_request_token(request, form_class=AuthorizeRequestTokenForm, templ
 @csrf_exempt
 def get_access_token(request):
     oauth_request = get_oauth_request(request)
+    is_xauth = 'x_auth_mode' in oauth_request
 
-    missing_params = require_params(oauth_request, ('oauth_token', 'oauth_verifier'))
+    if is_xauth:
+        if oauth_request['x_auth_mode'] != 'client_auth':
+            return HttpResponseBadRequest('Invalid x_auth_mode value, expected "client_auth".')
+        missing_params = require_params(oauth_request, ('x_auth_username', 'x_auth_password'))
+    else:
+        missing_params = require_params(oauth_request, ('oauth_token', 'oauth_verifier'))
+
     if missing_params is not None:
         return missing_params
 
     try:
         consumer = store.get_consumer(request, oauth_request, oauth_request['oauth_consumer_key'])
-        request_token = store.get_request_token(request, oauth_request, oauth_request['oauth_token'])
-    except InvalidTokenError:
-        return HttpResponseBadRequest('Invalid consumer.')
     except InvalidConsumerError:
-        return HttpResponseBadRequest('Invalid request token.')
+        return HttpResponseBadRequest('Invalid consumer.')
+
+    if is_xauth:
+        if not consumer.xauth_allowed:
+            return HttpResponseForbidden('xAuth not allowed for this consumer.')
+        request_token = None
+    else:
+        try:
+            request_token = store.get_request_token(request, oauth_request, oauth_request['oauth_token'])
+        except InvalidTokenError:
+            return HttpResponseBadRequest('Invalid request token.')
 
     if not verify_oauth_request(request, oauth_request, consumer, request_token):
         return HttpResponseBadRequest('Could not verify OAuth request.')
 
-    if oauth_request.get('oauth_verifier', None) != request_token.verifier:
+    if not is_xauth and oauth_request.get('oauth_verifier', None) != request_token.verifier:
         return HttpResponseBadRequest('Invalid OAuth verifier.')
 
-    access_token = store.create_access_token(request, oauth_request, consumer, request_token)
+    if is_xauth:
+        xauth_user = oauth_request['x_auth_username']
+        xauth_pass = oauth_request['x_auth_password']
+        user = authenticate(username=xauth_user, password=xauth_pass)
+        if user and user.is_active:
+            access_token = store.create_access_token_for_user(request, oauth_request, consumer, user)
+        else:
+            return HttpResponseForbidden('xAuth username/password combination invalid.')
+    else:
+        access_token = store.create_access_token(request, oauth_request, consumer, request_token)
 
     ret = urlencode({
         'oauth_token': access_token.key,
-        'oauth_token_secret': access_token.secret
+        'oauth_token_secret': access_token.secret,
+        'userid': access_token.user.id,
+        'screen_name': access_token.user.visible_name,
     })
+
     return HttpResponse(ret, content_type='application/x-www-form-urlencoded')
+

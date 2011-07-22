@@ -112,6 +112,18 @@ class Store(object):
         """
         raise NotImplementedError
 
+    def create_access_token_for_user(self, request, oauth_request, consumer, user):
+        """
+        Generate and return a Token. Use this method to generate access tokens for
+        xAuth requests.
+
+        `request`: The Django request object.
+        `oauth_request`: The `oauth2.Request` object.
+        `consumer`: The Consumer that made the request.
+        `user`: The user corresponding to the xAuth credentials.
+        """
+        raise NotImplementedError
+
     def get_access_token(self, request, oauth_request, consumer, access_token_key):
         """
         Return the Token for `access_token_key` or raise `InvalidTokenError`.
