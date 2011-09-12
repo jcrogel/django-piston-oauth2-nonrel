@@ -118,7 +118,7 @@ def get_access_token(request):
         'oauth_token': access_token.key,
         'oauth_token_secret': access_token.secret,
         'userid': access_token.user.id,
-        'screen_name': access_token.user.visible_name,
+        'screen_name': access_token.user.visible_name.encode('utf-8'),
     })
 
     return HttpResponse(ret, content_type='application/x-www-form-urlencoded')
