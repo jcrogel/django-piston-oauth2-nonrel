@@ -70,7 +70,8 @@ def authorize_request_token(request, form_class=AuthorizeRequestTokenForm, templ
 @csrf_exempt
 def get_access_token(request):
     oauth_request = get_oauth_request(request)
-    is_xauth = 'x_auth_mode' in oauth_request
+
+    is_xauth = oauth_request is not None and 'x_auth_mode' in oauth_request
 
     if is_xauth:
         if oauth_request['x_auth_mode'] != 'client_auth':
