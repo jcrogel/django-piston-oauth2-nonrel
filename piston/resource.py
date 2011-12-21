@@ -1,4 +1,5 @@
 import sys, inspect
+import logging
 
 from django.http import (HttpResponse, Http404, HttpResponseNotAllowed,
     HttpResponseForbidden, HttpResponseServerError)
@@ -17,6 +18,7 @@ from utils import coerce_put_post, FormValidationError, HttpStatusCode
 from utils import rc, format_error, translate_mime, MimerDataException
 
 CHALLENGE = object()
+logger = logging.getLogger(__name__)
 
 class Resource(object):
     """
@@ -67,7 +69,7 @@ class Resource(object):
 
     def form_validation_response(self, e):
         """
-        Method to return form validation error information. 
+        Method to return form validation error information.
         You will probably want to override this in your own
         `Resource` subclass.
         """
@@ -164,6 +166,7 @@ class Resource(object):
             result = meth(request, *args, **kwargs)
         except Exception, e:
             result = self.error_handler(e, request, meth, em_format)
+            logger.exception(result.content)
 
         try:
             emitter, ct = Emitter.get(em_format)
@@ -179,15 +182,15 @@ class Resource(object):
         status_code = 200
 
         # If we're looking at a response object which contains non-string
-        # content, then assume we should use the emitter to format that 
+        # content, then assume we should use the emitter to format that
         # content
         if isinstance(result, HttpResponse) and not result._is_string:
             status_code = result.status_code
             # Note: We can't use result.content here because that method attempts
-            # to convert the content into a string which we don't want. 
+            # to convert the content into a string which we don't want.
             # when _is_string is False _container is the raw data
             result = result._container
-     
+
         srl = emitter(result, typemapper, handler, fields, anonymous)
 
         try:
@@ -247,7 +250,7 @@ class Resource(object):
 
     def error_handler(self, e, request, meth, em_format):
         """
-        Override this method to add handling of errors customized for your 
+        Override this method to add handling of errors customized for your
         needs
         """
         if isinstance(e, FormValidationError):
@@ -275,8 +278,8 @@ class Resource(object):
 
         elif isinstance(e, HttpStatusCode):
             return e.response
- 
-        else: 
+
+        else:
             """
             On errors (like code errors), we'd like to be able to
             give crash reports to both admins and also the calling
