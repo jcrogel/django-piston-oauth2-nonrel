@@ -55,10 +55,15 @@ class TokenManager(KeyManager):
         """
         Shortcut to create a token with random key/secret.
         """
-        token, created = self.get_or_create(consumer=consumer, 
-                                            token_type=token_type, 
-                                            timestamp=timestamp,
-                                            user=user)
+
+        created = False
+
+        try:
+            token = self.get(consumer=consumer, token_type=token_type, timestamp=timestamp)
+        
+        except self.model.DoesNotExist:
+            created = True
+            token = self.model(consumer=consumer, token_type=token_type, timestamp=timestamp, user=user)
 
         if created:
             token.key, token.secret = self.generate_random_codes()

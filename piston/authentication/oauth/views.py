@@ -115,11 +115,16 @@ def get_access_token(request):
     else:
         access_token = store.create_access_token(request, oauth_request, consumer, request_token)
 
+    try:
+        screen_name = access_token.user.visible_name
+    except AttributeError:
+        screen_name = access_token.user.username
+
     ret = urlencode({
         'oauth_token': access_token.key,
         'oauth_token_secret': access_token.secret,
         'userid': access_token.user.id,
-        'screen_name': access_token.user.visible_name.encode('utf-8'),
+        'screen_name': screen_name.encode('utf-8'),
     })
 
     return HttpResponse(ret, content_type='application/x-www-form-urlencoded')
