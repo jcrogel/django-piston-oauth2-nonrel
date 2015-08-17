@@ -1,4 +1,4 @@
-from django.conf.urls.defaults import *
+from django.conf.urls import *
 from piston.resource import Resource
 from piston.authentication import HttpBasicAuthentication, HttpBasicSimple
 from piston.authentication.oauth import OAuthAuthentication
@@ -22,10 +22,10 @@ SIMPLE_USERS = (('admin', 'secr3t'),
                 ('admin', 'thisisneat'))
 
 for username, password in SIMPLE_USERS:
-    AUTHENTICATORS.append(HttpBasicSimple(realm='Test', 
+    AUTHENTICATORS.append(HttpBasicSimple(realm='Test',
                             username=username, password=password))
 
-multiauth = Resource(handler=PlainOldObjectHandler, 
+multiauth = Resource(handler=PlainOldObjectHandler,
                         authentication=AUTHENTICATORS)
 
 ouath_two_legged_api = Resource(handler=EchoHandler, authentication=OAuthAuthentication(realm='TestApplication', two_legged=True))
@@ -55,7 +55,7 @@ urlpatterns = patterns('',
 
     url(r'^list_fields$', list_fields),
     url(r'^list_fields/(?P<id>.+)$', list_fields),
-    
+
     url(r'^popo$', popo),
 )
 
